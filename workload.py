@@ -5,16 +5,17 @@ OSD_BACKFILL_PRIORITY_BASE=100
 
 class Reservation:
     '''
-    Reservation class to request and cancel reservations.
+    Reservation class to define reservations
     A reservation is defined by an id, and has the following characteristics -
     1. Type that determines its priority
     2. Placement group that is making the reservation
     3. Time taken to complete this task (approx.)
     '''
-    def __init__(self, id, pg, type='degraded', time=10):
+    def __init__(self, id, pg, can_preempt=True, type='degraded', time=10):
         self.id = id
         self.pg = pg
         self.type = 'degraded'
+        self.can_preempt = can_preempt
 
         if type == 'degraded':
             self.priority = OSD_RECOVERY_PRIORITY_MIN
@@ -24,31 +25,20 @@ class Reservation:
             self.priority = OSD_RECOVERY_PRIORITY_MIN
 
         self.time = time
+        self.state = 'Initiated'
 
-    def request_reservation(self, scheduler, osd):
-        '''
-        Request a reservation on a particular OSD
-        In Ceph's code, first a local reservation is made and then forwarded
-        to the appropriate OSD's remote reserver. We avoid this for simplicity
-        :param osd:
-        :return:
-        '''
+    def get_task_state(self):
+        return self.state
 
-        result = scheduler.request_reservation(id=self.id, pg=self.pg, time=self.time, priority=self.priority, osd=osd)
-
-        return result
-
-    def cancel_reservation(self, scheduler, osd):
-        '''
-        Cancel an existing reservation on an osd
-        :param scheduler:
-        :param osd:
-        :return:
-        '''
-
-        ret = scheduler.cancel_reservation(id=self.id, pg=self.pg, time=self.time, priority=self.priority, osd=osd)
-
-        assert(ret == True)
+    def on_state_change(self):
+        state = self.get_task_state()
+        if state == 'Completed':
+            return True
+        elif state == 'Preempted':
+            return False
+        else:
+            print ('Called at the wrong time')
+            return False
 
 
 class OSD:
@@ -81,10 +71,19 @@ class OSD:
     def schedule_task(self, task):
         self.num_tasks += 1
         self.current_tasks.append(task)
+        task.state = 'In progress'
 
     def task_completed(self, task):
         self.num_tasks -= 1
         self.current_tasks.remove(task)
+        task.state = 'Completed'
+        task.on_state_changed()
+
+    def task_preempted(self, task):
+        self.num_tasks -= 1
+        self.current_tasks.remove(task)
+        task.state = 'Preempted'
+        task.on_state_changed()
 
 
 class PG:
@@ -111,37 +110,32 @@ class PG:
     def get_pg_state(self):
         return self.state
 
-    def request_reservation(self, id, type, time, scheduler, max_tries=10):
+    def request_reservation(self, id, type, time, scheduler):
         r = Reservation(id, self, type, time)
 
         # For now, all requests go to primary. Change this later
         i = 0
         ret = False
 
-        while not ret or i >= max_tries:
-            # Return only shows if it is added to the queue or not, not if it got preempted or not
-            ret = scheduler.request_reservation(reservation=r, pg=self, osd=self.primary_osd)
-            i += 1
-            sleep(10)
+        scheduler.request_reservation(reservation=r)
 
         if ret:
             print ('Backfill successfully completed')
         else:
-            print ('Backfill failed after ', max_tries, ' tries')
+            print ('Backfill failed after ')
 
-        # Cancel reservation to ensure that its removed from all the scheduler queues
-        self.cancel_reservation(scheduler, osd=self.primary_osd)
+        return r
 
-    def cancel_reservation(self, scheduler, osd):
+    def cancel_reservation(self, scheduler):
         '''
         Cancel an existing reservation on an osd
         :param scheduler:
-        :param osd:
         :return:
         '''
 
-        ret = scheduler.cancel_reservation(reservation=r, pg=self, osd=self.primary_osd)
+        ret = scheduler.cancel_reservation(reservation=r)
         assert(ret == True)
 
 
-class Workload(self, reserver_type='degraded', reserver_):
+class Workload:
+
