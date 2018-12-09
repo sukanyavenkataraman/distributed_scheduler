@@ -1,30 +1,35 @@
 import asyncio
 
-async def scheduled_task(seconds):
-    print('scheduled_task(): before sleep')
-    try:
-        await asyncio.sleep(seconds)
-        print("here")
-    except asyncio.CancelledError:
-        print('scheduled_task(): cancel sleep')
-        raise
-    finally:
-        print('scheduled_task(): after sleep')
-        return seconds
+def schedule_task_async(reservation, callback):
+    task = reservation.osd.async_event_loop.create_task(scheduled_task(reservation))
 
-async def add_success_callback(fut, callback):
+    print ('Callback - ', callback)
+    task = add_success_callback(task, callback, reservation)
+    reservation.osd.async_event_loop.run_until_complete(task)
+
+async def scheduled_task(reservation):
+    print('scheduled_task(): before sleep')
+    reservation.osd.schedule_task(reservation)
+
+    await asyncio.sleep(reservation.time)
+    print("here")
+    print('scheduled_task(): after sleep')
+    return reservation.time
+
+async def add_success_callback(fut, callback, reservation):
     result = await fut
-    await callback(result)
+    await my_callback(reservation, callback)
     return result
 
-async def my_callback(result):
-    print("my_callback got:", result)
-    #use the value of result to determine what to call - success or failure callbacks
+async def my_callback(reservation, callback):
+    print("my_callback got:", reservation.id)
+    callback(reservation)
     return "My return value is ignored"
 
-
+'''
 loop = asyncio.get_event_loop()
 task = loop.create_task(scheduled_task(4))
 task = add_success_callback(task, my_callback)
 response = loop.run_until_complete(task)
 print("response:", response)
+'''
