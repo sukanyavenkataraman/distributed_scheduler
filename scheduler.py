@@ -1,6 +1,5 @@
 import heapq
-from asyncprocess import schedule_task_async, scheduled_task, add_success_callback, my_callback
-import asyncio
+from asyncprocess import schedule_task
 
 class Scheduler:
     def __init__(self, type='current'):
@@ -17,8 +16,6 @@ class Scheduler:
         #Default
         self.max_allowed = 10
         self.min_priority = 0
-
-        self.async_event_loop = asyncio.get_event_loop()
 
 
     def get_scheduler_state(self):
@@ -65,16 +62,9 @@ class Scheduler:
         self.get_scheduler_state()
 
         if reservation in self.in_progress:
-            print ('Removing reservation from in progress queue')
+            print ('Removing reservation ', reservation.id, ' from in progress queue')
             self.in_progress.remove(reservation)
 
-            '''
-            # If no reservations of priority present, then remove from priorities heap
-            if len(self.all_queues[reservation.priority]) == 0:
-                self.priorities.remove(-1.0*reservation.priority)
-
-            #scheduled_task_async(reservation, callback)
-            '''
             if reservation.priority in self.preempt_queue:
                 print ('Can preempt so removing from preempt queue')
                 self.preempt_queue[reservation.priority].remove(reservation)
@@ -86,6 +76,7 @@ class Scheduler:
                     del self.preempt_queue[reservation.priority]
 
         else:
+            print ('Reservation ', reservation.id, ' not in progress queue, removing from all queues')
             self.all_queues[reservation.priority].remove(reservation)
 
             if len(self.all_queues[reservation.priority]) == 0:
@@ -106,10 +97,7 @@ class Scheduler:
         print ('Current state')
         self.get_scheduler_state()
 
-        # First cancel reservation
-        self.cancel_reservation(reservation)
-
-        # Then call state change to preempted
+        #Call state change to preempted
         reservation.osd.task_preempted(reservation)
 
         print ('State after preemption')
@@ -158,10 +146,7 @@ class Scheduler:
             callback = reservation.osd.task_completed
 
             # Call async process
-            schedule_task_async(reservation, callback, self.async_event_loop)
-
-
-
+            schedule_task(reservation)
 
     def set_max(self, max):
         # Change osd max_allowed

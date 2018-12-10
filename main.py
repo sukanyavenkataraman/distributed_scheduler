@@ -1,6 +1,9 @@
 import asyncio
 from ceph_classes import Reservation, OSD, PG
 import random
+import threading
+from multiprocessing.pool import ThreadPool
+import time
 
 tasks = {0:'TASK_BACKFILL', 1:'TASK_RECOVERY', 2:'TASK_SCRUB'}
 
@@ -12,6 +15,7 @@ class Workload:
         self.osd_pg_map = {0:[(0,0), (1,1), (2,1), (1,2), (2,2)], 1:[(0,1), (0,2), (1,0), (2,0)]}
         self.pg_osd_map = {0:[0,1], 1:[1,0], 2:[1,0]}
 
+        self.response_times = {}
         '''
         for i in range(len(num_pgs)):
             for j in range(num_replicas):
@@ -42,30 +46,104 @@ class Workload:
         return tasks[random.randint(0,2)], self.placement_groups[random.randint(0, self.num_pgs-1)]
 
     def generate_workload(self):
-        for i in range(self.num_tasks):
+        thread_pool = ThreadPool(self.num_tasks)
+        thread_pool.map(self.workload_thread, [i for i in range(self.num_tasks)])
 
-            print ('Going to get a random task')
+        thread_pool.close()
+        thread_pool.join()
+        print ('All threads completed')
+        print (self.response_times)
 
-            #Get random task of a type and on a pg
+    def workload_thread(self, index):
+            retry = True
+
+
+            # Get random task of a type and on a pg
             task_type, pg = self.get_random_task()
 
-            print ('Task and Placement group: ', task_type, pg.id)
+            print('Task and Placement group: ', task_type, pg.id)
             # Random amount of time for task to complete
-            time_for_task_to_complete = random.randint(0, 10)
+            time_for_task_to_complete = random.randint(1, 3)
+            can_preempt = True
 
-            #Request a local reservation
-            print ('Going to create a reservation')
-            can_preempt = False
-            r = Reservation(i, pg, pg.primary_osd, can_preempt, task_type, time_for_task_to_complete)
+            self.response_times[index+0.1*pg.primary_osd.id] = time.time()
 
-            print ('Now going to request a local reservation ins osd: ', r.pg.primary_osd.id)
-            ret = r.pg.primary_osd.local_reserver.request_reservation(reservation=r)
+            while(retry):
+                print ('Going to get a random task')
 
-            print ('Request reservation success?: ', ret)
+                #Request a local reservation
+                print ('Going to create a reservation which should take')
+                r = Reservation(index, pg, pg.primary_osd, can_preempt, task_type, time_for_task_to_complete)
+
+                print ('Now going to request a local reservation ins osd: ', r.pg.primary_osd.id)
+                ret = r.pg.primary_osd.local_reserver.request_reservation(reservation=r)
+
+                while r.state not in ('Completed', 'Preempted'):
+                    print ('State not changed yet:', r.state)
+                    time.sleep(1)
+
+                if r.state == 'Completed':
+                    print ('\t\t\t\tLocal reservation completed. Going to request remote')
+                    r.pg.primary_osd.local_reserver.cancel_reservation(r)
+                    #Requesting remote reservations
+
+                    self.response_times[index+0.1*pg.primary_osd.id] = time.time() - self.response_times[index+0.1*pg.primary_osd.id]
+                    thread_pool = ThreadPool(len(r.pg.replica_osd))
+                    print ('replica osds for reservation ', index, ' are ', len(r.pg.replica_osd))
+                    thread_pool.map(self.workload_remote_thread, [(r, replica_osd) for replica_osd in r.pg.replica_osd])
+
+                    thread_pool.close()
+                    thread_pool.join()
+
+                    retry = False
+
+                elif r.state == 'Preempted':
+                    print('\t\t\t\tPreempted task ', r.id,' so going to retry')
+                    r.pg.primary_osd.local_reserver.cancel_reservation(r)
+                    #print ('\t\t\t\t')
+                    # Preempted, so retry
+                    time.sleep(5)
+                    continue
 
 
+    def workload_remote_thread(self, info):
 
-wl = Workload(5)
+        local_reservation = info[0]
+        replica_osd = info[1]
+
+        retry = True
+
+        self.response_times[local_reservation.id+0.1*replica_osd.id] = time.time()
+
+        while (retry):
+            new_remote_reservation = Reservation(local_reservation.id+0.1*replica_osd.id, local_reservation.pg, replica_osd, local_reservation.can_preempt, \
+                                                 local_reservation.type, local_reservation.time)
+
+            print('Going to request a remote reservation on osd: ', replica_osd.id)
+            ret = replica_osd.remote_reserver.request_reservation(new_remote_reservation)
+
+            while new_remote_reservation.state not in ('Completed', 'Preempted'):
+                print('State not changed yet:', new_remote_reservation.state)
+                time.sleep(1)
+
+            if new_remote_reservation.state == 'Completed':
+                print ('Remote reservation ', new_remote_reservation.id, ' completed on osd ', replica_osd.id)
+                replica_osd.remote_reserver.cancel_reservation(new_remote_reservation)
+                self.response_times[local_reservation.id + 0.1 * replica_osd.id] = time.time() - self.response_times[local_reservation.id+0.1*replica_osd.id]
+
+                retry = False
+
+            elif new_remote_reservation.state == 'Preempted':
+                print('\t\t\t\tPreempted remote reservation ', new_remote_reservation.id, ' so going to retry')
+                replica_osd.remote_reserver.cancel_reservation(new_remote_reservation)
+                # Preempted, so retry
+                time.sleep(5)
+                continue
+
+        print ('Request reservation success?: ', ret)
+
+
+wl = Workload(3)
 wl.generate_workload()
 
 

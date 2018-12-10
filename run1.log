@@ -1,0 +1,207 @@
+Going to get a random task
+Going to get a random task
+Task and Placement group:  TASK_SCRUB 0
+Going to create a reservation which should take
+Now going to request a local reservation ins osd:  0
+State before requesting reservation
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+State after requesting reservation
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1e8978>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Inside do queue. Current state: 
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1e8978>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Can preempt, so adding to preempt queue
+Going to schedule a task
+Thread started
+Scheduling task on OSD:  0  Current state: 
+Current state of OSD:  0
+0
+[]
+Usage:  0.0
+Task and Placement group:  TASK_RECOVERY 2
+Going to create a reservation which should take
+Now going to request a local reservation ins osd:  1
+State before requesting reservation
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+State after requesting reservation
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1e8c18>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Inside do queue. Current state: 
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1e8c18>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Can preempt, so adding to preempt queue
+Going to schedule a task
+Thread started
+Scheduling task on OSD:  1  Current state: 
+Current state of OSD:  1
+0
+[]
+Usage:  0.0
+here
+Thread finished
+Task  0  completed on OSD:  0  Current state: 
+Current state of OSD:  0
+1
+[0]
+Usage:  1.0
+Completed local reservation, cancelling:  0
+Going to cancel reservation  0
+Allqueues:  {}
+In progress queue:  [<ceph_classes.Reservation object at 0x10a1e8978>]
+Preempt queue:  {0: [<ceph_classes.Reservation object at 0x10a1e8978>]}
+All priorities:  []
+Preempt priorities:  [0]
+Removing reservation from in progress queue
+Can preempt so removing from preempt queue
+Length is 0 so going to delete
+State after cancelling
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+Going to request a remote reservation on osd:  1
+State before requesting reservation
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+State after requesting reservation
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1f9160>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Inside do queue. Current state: 
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1f9160>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Can preempt, so adding to preempt queue
+Going to schedule a task
+Thread started
+Scheduling task on OSD:  1  Current state: 
+Current state of OSD:  1
+1
+[1]
+Usage:  1.0
+here
+Thread finished
+Task  1  completed on OSD:  1  Current state: 
+Current state of OSD:  1
+2
+[1, 0]
+Usage:  2.0
+Completed local reservation, cancelling:  1
+Going to cancel reservation  1
+Allqueues:  {}
+In progress queue:  [<ceph_classes.Reservation object at 0x10a1e8c18>]
+Preempt queue:  {0: [<ceph_classes.Reservation object at 0x10a1e8c18>]}
+All priorities:  []
+Preempt priorities:  [0]
+Removing reservation from in progress queue
+Can preempt so removing from preempt queue
+Length is 0 so going to delete
+State after cancelling
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+Going to request a remote reservation on osd:  0
+State before requesting reservation
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+State after requesting reservation
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1f9668>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Inside do queue. Current state: 
+Allqueues:  {0: [<ceph_classes.Reservation object at 0x10a1f9668>]}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  [-0.0]
+Preempt priorities:  []
+Can preempt, so adding to preempt queue
+Going to schedule a task
+Thread started
+Scheduling task on OSD:  0  Current state: 
+Current state of OSD:  0
+0
+[]
+Usage:  0.0
+here
+Thread finished
+Task  1  completed on OSD:  0  Current state: 
+Current state of OSD:  0
+1
+[1]
+Usage:  1.0
+Going to cancel reservation  1
+Allqueues:  {}
+In progress queue:  [<ceph_classes.Reservation object at 0x10a1f9668>]
+Preempt queue:  {0: [<ceph_classes.Reservation object at 0x10a1f9668>]}
+All priorities:  []
+Preempt priorities:  [0]
+Removing reservation from in progress queue
+Can preempt so removing from preempt queue
+Length is 0 so going to delete
+State after cancelling
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+Request reservation success?:  None
+here
+Thread finished
+Task  0  completed on OSD:  1  Current state: 
+Current state of OSD:  1
+1
+[0]
+Usage:  1.0
+Going to cancel reservation  0
+Allqueues:  {}
+In progress queue:  [<ceph_classes.Reservation object at 0x10a1f9160>]
+Preempt queue:  {0: [<ceph_classes.Reservation object at 0x10a1f9160>]}
+All priorities:  []
+Preempt priorities:  [0]
+Removing reservation from in progress queue
+Can preempt so removing from preempt queue
+Length is 0 so going to delete
+State after cancelling
+Allqueues:  {}
+In progress queue:  []
+Preempt queue:  {}
+All priorities:  []
+Preempt priorities:  []
+Request reservation success?:  None
+All threads completed

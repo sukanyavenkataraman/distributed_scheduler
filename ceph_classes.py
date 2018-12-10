@@ -3,7 +3,7 @@ from scheduler import Scheduler
 import time
 
 # Priorities
-OSD_RECOVERY_PRIORITY_MIN=0
+OSD_RECOVERY_PRIORITY_MIN=10
 OSD_BACKFILL_PRIORITY_BASE=100
 
 class Reservation:
@@ -14,7 +14,7 @@ class Reservation:
     2. Placement group that is making the reservation
     3. Time taken to complete this task (approx.)
     '''
-    def __init__(self, id, pg, osd, can_preempt=True, type='TASK_RECOVERY', time=10, max_tries_preempt=0):
+    def __init__(self, id, pg, osd, can_preempt=True, type='TASK_RECOVERY', time=10, max_tries_preempt=3):
         self.id = id
         self.pg = pg
         self.osd = osd
@@ -55,7 +55,7 @@ class OSD:
     Assume that an OSD can perform a max of max_tasks (foreground and background)
     Usage is computed as a percentage of this max_tasks
     '''
-    def __init__(self, id, max_tasks=100, max_backfills=2, min_priority=100):
+    def __init__(self, id, max_tasks=100, max_backfills=2, min_priority=0):
         self.id = id
 
         self.max_backfills = max_backfills
@@ -97,57 +97,31 @@ class OSD:
         task.state = 'In progress'
 
     def task_completed(self, task):
-        print('Task ', task.id, ' completed on OSD: ', self.id, ' Current state: ')
+        print('Task ', task.id, ' completed on OSD: ', self.id, ' with state ', task.state)
+        print('Current state of OSD: ')
         self.get_current_state()
 
         if task not in self.current_tasks:
             print ('How is task: ', task.id, ' not present in current_tasks: ', [task.id for task in self.current_tasks])
+            return
 
         self.num_tasks -= 1
         self.current_tasks.remove(task)
         task.state = 'Completed'
-        task.on_state_changed()
-
-        #If local then request remote reservation
-        if task.pg.primary_osd.id == self.id:
-            # Completed, so cancel
-            print ('Completed local reservation, cancelling: ', task.id)
-            self.local_reserver.cancel_reservation(task)
-
-            # Create a new remote reservation for every replica and request
-            for osd in task.pg.replica_osd:
-                new_remote_reservation = Reservation(task.id, task.pg, osd, task.can_preempt, task.type, task.time)
-                print ('Going to request a remote reservation on osd: ', osd.id)
-                osd.remote_reserver.request_reservation(new_remote_reservation)
-
-        else:
-            # Remote reservation, just cancel
-            self.remote_reserver.cancel_reservation(task)
 
     def task_preempted(self, task):
 
         print('Task ', task.id, ' preempted on OSD: ', self.id, ' Current state: ')
         self.get_current_state()
+        task.state = 'Preempted'
 
         if task not in self.current_tasks:
             print('How is task: ', task.id, ' not present in current_tasks: ', [task.id for task in self.current_tasks])
-
+            return
 
         self.num_tasks -= 1
         self.current_tasks.remove(task)
-        task.state = 'Preempted'
 
-        # Since preempted, retry
-        # Local
-        if task.pg.primary_osd == self.id:
-            if task.tries_current < task.max_tries_preempt:
-                self.local_reserver.request_reservation(task)
-                task.tries_current += 1
-        else:
-            #Remote
-            if task.tries_current < task.max_tries_preempt:
-                self.remote_reserver.request_reservation(task)
-                task.tries_current += 1
 
 
 class PG:
@@ -173,27 +147,3 @@ class PG:
 
     def get_pg_state(self):
         return self.state
-
-    def request_reservation(self, id, osd, type, time):
-        # First get a local reservation. If granted, request remote. Else retry
-
-        r = Reservation(id, self, osd, type, time)
-
-        ret = osd.scheduler.request_reservation(reservation=r)
-
-        if ret:
-            print('Backfill successfully completed')
-        else:
-            print('Backfill failed after ')
-
-        return r
-
-    def cancel_reservation(self, reservation):
-        '''
-        Cancel an existing reservation on an osd
-        :param scheduler:
-        :return:
-        '''
-
-        ret = reservation.osd.cancel_reservation(reservation=reservation)
-        assert(ret == True)
