@@ -10,7 +10,7 @@ class Workload:
         self.num_pgs = num_pgs
 
         self.osd_pg_map = {0:[(0,0), (1,1), (2,1), (1,2), (2,2)], 1:[(0,1), (0,2), (1,0), (2,0)]}
-        self.pg_osd_map = {0:[0,1,1], 1:[1,0,0], 2:[1,0,0]}
+        self.pg_osd_map = {0:[0,1], 1:[1,0], 2:[1,0]}
 
         '''
         for i in range(len(num_pgs)):
@@ -51,16 +51,19 @@ class Workload:
 
             print ('Task and Placement group: ', task_type, pg.id)
             # Random amount of time for task to complete
-            time_for_task_to_complete = random.randint(0, 2)
+            time_for_task_to_complete = random.randint(0, 10)
 
             #Request a local reservation
             print ('Going to create a reservation')
-            r = Reservation(i, pg, pg.primary_osd, task_type, time_for_task_to_complete)
+            can_preempt = False
+            r = Reservation(i, pg, pg.primary_osd, can_preempt, task_type, time_for_task_to_complete)
 
-            print ('Now going to request a reservation')
-            ret = r.pg.primary_osd.scheduler.request_reservation(reservation=r)
+            print ('Now going to request a local reservation ins osd: ', r.pg.primary_osd.id)
+            ret = r.pg.primary_osd.local_reserver.request_reservation(reservation=r)
 
             print ('Request reservation success?: ', ret)
+
+
 
 wl = Workload(5)
 wl.generate_workload()

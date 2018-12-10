@@ -1,5 +1,6 @@
 import heapq
 from asyncprocess import schedule_task_async, scheduled_task, add_success_callback, my_callback
+import asyncio
 
 class Scheduler:
     def __init__(self, type='current'):
@@ -17,13 +18,23 @@ class Scheduler:
         self.max_allowed = 10
         self.min_priority = 0
 
+        self.async_event_loop = asyncio.get_event_loop()
+
+
+    def get_scheduler_state(self):
+        print ('Allqueues: ', self.all_queues)
+        print ('In progress queue: ', self.in_progress)
+        print ('Preempt queue: ', self.preempt_queue)
+        print ('All priorities: ', self.priorities)
+        print ('Preempt priorities: ', self.preempt_priorities)
 
     def request_reservation(self, reservation):
         # Requesting reserver for task reservation, for placement group pg and on osd osd
 
         #ordered dict's order is acending, but we want the order to be reversed, i.e, highest priprity takes precedence
 
-        print (self.priorities, self.all_queues, self.in_progress, self.preempt_priorities, self.preempt_queue)
+        print ('State before requesting reservation')
+        self.get_scheduler_state()
 
         if -1.0*reservation.priority not in self.priorities:
             heapq.heappush(self.priorities, -1.0*reservation.priority)
@@ -37,6 +48,9 @@ class Scheduler:
         self.max_allowed = reservation.osd.max_backfills
         self.min_priority = reservation.osd.min_priority
 
+        print('State after requesting reservation')
+        self.get_scheduler_state()
+
         if self.type == 'current':
             return self.do_queue_current()
         
@@ -48,6 +62,8 @@ class Scheduler:
     def cancel_reservation(self, reservation):
 
         print ('Going to cancel reservation ', reservation.id)
+        self.get_scheduler_state()
+
         if reservation in self.in_progress:
             print ('Removing reservation from in progress queue')
             self.in_progress.remove(reservation)
@@ -65,17 +81,20 @@ class Scheduler:
 
                 if len(self.preempt_queue[reservation.priority]) == 0:
                     print ('Length is 0 so going to delete')
-                    self.preempt_priorities.remove(-1.0*reservation.priority)
+                    self.preempt_priorities.remove(reservation.priority)
                     #self.preempt_queue.pop(reservation.priority)
                     del self.preempt_queue[reservation.priority]
 
         else:
-            self.all_queues[-1.0 * reservation.priority].remove(reservation)
+            self.all_queues[reservation.priority].remove(reservation)
 
             if len(self.all_queues[reservation.priority]) == 0:
                 print ('No reservations of this priority, so removing')
                 self.all_queues.pop(reservation.priority)
                 self.priorities.remove(-1.0 * reservation.priority)
+
+        print ('State after cancelling')
+        self.get_scheduler_state()
 
 
     def preempt(self):
@@ -84,15 +103,24 @@ class Scheduler:
         reservation = self.preempt_queue[self.preempt_priorities[0]][0]
         print ('Preempting reservation')
 
+        print ('Current state')
+        self.get_scheduler_state()
+
         # First cancel reservation
         self.cancel_reservation(reservation)
 
         # Then call state change to preempted
         reservation.osd.task_preempted(reservation)
 
+        print ('State after preemption')
+        self.get_scheduler_state()
+
     def do_queue_current(self):
 
-        print ('Inside do queue')
+        print ('Inside do queue. Current state: ')
+        self.get_scheduler_state()
+
+        #TODO: Preempt when higher priority process comes always
         while ((len(self.preempt_queue) > 0 and len(self.in_progress) > self.max_allowed) or \
                ((len(self.preempt_queue) > 0 and self.preempt_priorities[0] < self.min_priority))):
                 print ('Going to preempt reservation ', self.preempt_queue, self.preempt_priorities)
@@ -108,7 +136,7 @@ class Scheduler:
             self.in_progress.append(reservation)
 
             # Remove from all_queues
-            self.all_queues[-1.0 * reservation.priority].remove(reservation)
+            self.all_queues[reservation.priority].remove(reservation)
 
             if len(self.all_queues[reservation.priority]) == 0:
                 self.all_queues.pop(reservation.priority)
@@ -130,7 +158,7 @@ class Scheduler:
             callback = reservation.osd.task_completed
 
             # Call async process
-            schedule_task_async(reservation, callback)
+            schedule_task_async(reservation, callback, self.async_event_loop)
 
 
 

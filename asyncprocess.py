@@ -1,19 +1,31 @@
 import asyncio
+import threading
+import time
 
-def schedule_task_async(reservation, callback):
-    task = reservation.osd.async_event_loop.create_task(scheduled_task(reservation))
+def schedule_task_async(reservation, callback, async_loop):
+    # Create a thread for each task
+    thread = threading.Thread(target=scheduled_task, name=str(reservation.id)+'_'+reservation.type, args=([reservation]))
+    thread.start()
 
-    print ('Callback - ', callback)
-    task = add_success_callback(task, callback, reservation)
-    reservation.osd.async_event_loop.run_until_complete(task)
+    #thread.run()
+    #task = async_loop.create_task(scheduled_task(reservation))
 
-async def scheduled_task(reservation):
-    print('scheduled_task(): before sleep')
+    #print ('Callback - ', callback)
+    #task = add_success_callback(task, callback, reservation)
+    #reservation.osd.async_event_loop.run_coroutine_threadsafe(task)
+
+    #asyncio.run_coroutine_threadsafe(task, async_loop)
+
+def scheduled_task(args):
+    reservation = args
+    print('Thread started')
     reservation.osd.schedule_task(reservation)
 
-    await asyncio.sleep(reservation.time)
+    time.sleep(reservation.time)
     print("here")
-    print('scheduled_task(): after sleep')
+    print('Thread finished')
+    reservation.osd.task_completed(reservation)
+
     return reservation.time
 
 async def add_success_callback(fut, callback, reservation):

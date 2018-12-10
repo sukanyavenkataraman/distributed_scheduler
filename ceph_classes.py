@@ -1,5 +1,6 @@
 import asyncio
 from scheduler import Scheduler
+import time
 
 # Priorities
 OSD_RECOVERY_PRIORITY_MIN=0
@@ -13,11 +14,14 @@ class Reservation:
     2. Placement group that is making the reservation
     3. Time taken to complete this task (approx.)
     '''
-    def __init__(self, id, pg, osd, can_preempt=True, type='TASK_RECOVERY', time=10):
+    def __init__(self, id, pg, osd, can_preempt=True, type='TASK_RECOVERY', time=10, max_tries_preempt=0):
         self.id = id
         self.pg = pg
         self.osd = osd
         self.can_preempt = can_preempt
+        self.type = type
+        self.max_tries_preempt = max_tries_preempt
+        self.tries_current = 0
 
         if type == 'TASK_RECOVERY':
             self.priority = OSD_RECOVERY_PRIORITY_MIN
@@ -62,8 +66,8 @@ class OSD:
 
         self.current_tasks = []
 
-        self.async_event_loop = asyncio.get_event_loop()
-        self.scheduler = Scheduler()
+        self.local_reserver = Scheduler()
+        self.remote_reserver = Scheduler()
 
     '''
     def __repr__(self):
@@ -75,37 +79,75 @@ class OSD:
         print ('Current usage: ', self.get_current_usage())
     '''
 
+    def get_current_state(self):
+        print ('Current state of OSD: ', self.id)
+        print (self.num_tasks)
+        print ([task.id for task in self.current_tasks])
+        print ('Usage: ', self.get_current_usage())
+
     def get_current_usage(self):
         return 100.0*self.num_tasks/self.max_tasks
 
     def schedule_task(self, task):
+        print ('Scheduling task on OSD: ', self.id, ' Current state: ')
+        self.get_current_state()
+
         self.num_tasks += 1
         self.current_tasks.append(task)
         task.state = 'In progress'
 
     def task_completed(self, task):
+        print('Task ', task.id, ' completed on OSD: ', self.id, ' Current state: ')
+        self.get_current_state()
+
+        if task not in self.current_tasks:
+            print ('How is task: ', task.id, ' not present in current_tasks: ', [task.id for task in self.current_tasks])
+
         self.num_tasks -= 1
         self.current_tasks.remove(task)
         task.state = 'Completed'
         task.on_state_changed()
 
-        #Completed, so cancel
-        self.scheduler.cancel_reservation(task)
-
         #If local then request remote reservation
-        if task.pg.primary_osd == self.id:
+        if task.pg.primary_osd.id == self.id:
+            # Completed, so cancel
+            print ('Completed local reservation, cancelling: ', task.id)
+            self.local_reserver.cancel_reservation(task)
+
             # Create a new remote reservation for every replica and request
             for osd in task.pg.replica_osd:
                 new_remote_reservation = Reservation(task.id, task.pg, osd, task.can_preempt, task.type, task.time)
-                osd.scheduler.request_reservation(new_remote_reservation)
+                print ('Going to request a remote reservation on osd: ', osd.id)
+                osd.remote_reserver.request_reservation(new_remote_reservation)
+
+        else:
+            # Remote reservation, just cancel
+            self.remote_reserver.cancel_reservation(task)
 
     def task_preempted(self, task):
+
+        print('Task ', task.id, ' preempted on OSD: ', self.id, ' Current state: ')
+        self.get_current_state()
+
+        if task not in self.current_tasks:
+            print('How is task: ', task.id, ' not present in current_tasks: ', [task.id for task in self.current_tasks])
+
+
         self.num_tasks -= 1
         self.current_tasks.remove(task)
         task.state = 'Preempted'
 
         # Since preempted, retry
-        self.scheduler.request_reservation(task)
+        # Local
+        if task.pg.primary_osd == self.id:
+            if task.tries_current < task.max_tries_preempt:
+                self.local_reserver.request_reservation(task)
+                task.tries_current += 1
+        else:
+            #Remote
+            if task.tries_current < task.max_tries_preempt:
+                self.remote_reserver.request_reservation(task)
+                task.tries_current += 1
 
 
 class PG:
