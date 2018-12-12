@@ -8,30 +8,38 @@ import time
 tasks = {0:'TASK_BACKFILL', 1:'TASK_RECOVERY', 2:'TASK_SCRUB'}
 
 class Workload:
-    def __init__(self, num_tasks, num_osds=2, num_pgs=3, num_replicas=2):
+    def __init__(self, num_tasks, num_pgs=128, is_skewed=0, taskSizes=0, num_osds=3):
         self.num_tasks = num_tasks
+        self.isSkewed = is_skewed
         self.num_pgs = num_pgs
 
-        self.osd_pg_map = {0:[(0,0), (1,1), (2,1), (1,2), (2,2)], 1:[(0,1), (0,2), (1,0), (2,0)]}
-        self.pg_osd_map = {0:[0,1], 1:[1,0], 2:[1,0]}
+        self.osd_pg_map = {}
+        self.pg_osd_map = {}
+
+        #building the osd_pg and pg_osd maps
+        for osd in range(num_osds):
+            self.osd_pg_map[osd] = []
+
+        for pg in range(num_pgs):
+            primary_osd = pg % 3
+            replica_1_osd = (primary_osd + 1) % 3
+            replica_2_osd = (replica_1_osd + 1) % 3
+            self.osd_pg_map[primary_osd].append((pg, 0))
+            self.osd_pg_map[replica_1_osd].append((pg, 1))
+            self.osd_pg_map[replica_2_osd].append((pg, 2))
+            self.pg_osd_map[pg] = [primary_osd, replica_1_osd, replica_2_osd]
 
         self.response_times = {}
-        '''
-        for i in range(len(num_pgs)):
-            for j in range(num_replicas):
-                if j == 0:
-                    self.pg_osd_map[j] = [random.randint(0, num_osds)]
-                else:
-                    self.pg_osd_map[j].append(random.randint(0, num_osds))
-                    
-                if self.pg_osd_map[j] in self.osd_pg_map:
-                    self.osd_pg_map[self.pg_osd_map[j]] = [i]
-                else:
-                    self.osd_pg_map[self.pg_osd_map[j]] = [i]
-        '''
-
         self.obj_storage_devices = []
-        self.placement_groups = []
+        self.placement_groups = {} #map for pg_id -> pg object
+
+        #To select random sized tasks or short/long-running tasks
+        if taskSizes == 0:
+            self.taskSizes = [1, 10]
+        elif taskSizes == -1:
+            self.taskSizes = [1]
+        else:
+            self.taskSizes = [10]
 
         for i in range(num_osds):
             self.obj_storage_devices.append(OSD(i))
@@ -40,30 +48,40 @@ class Workload:
             pg_primary = self.obj_storage_devices[self.pg_osd_map[i][0]]
             pg_replicas = [self.obj_storage_devices[i] for i in self.pg_osd_map[i][1:]]
 
-            self.placement_groups.append(PG(i, pg_primary, pg_replicas))
+            self.placement_groups[i] = PG(i, pg_primary, pg_replicas)
 
     def get_random_task(self):
         return tasks[random.randint(0,2)], self.placement_groups[random.randint(0, self.num_pgs-1)]
 
+    def get_skewed_task(self):
+        placement_groups = [x[0] for x in self.osd_pg_map[0] if x[1] == 0]
+        return tasks[random.randint(0,2)], self.placement_groups[random.choice(placement_groups)]
+
     def generate_workload(self):
+
         thread_pool = ThreadPool(self.num_tasks)
-        thread_pool.map(self.workload_thread, [i for i in range(self.num_tasks)])
+        thread_pool.map(self.workload_thread, [(i, random.choice(self.taskSizes), self.isSkewed) for i in range(self.num_tasks)])
 
         thread_pool.close()
         thread_pool.join()
         print ('All threads completed')
         print (self.response_times)
 
-    def workload_thread(self, index):
+    def workload_thread(self, info):
             retry = True
+            index = info[0]
+            taskSize = info[1]
+            isSkewed = info[2]
 
-
-            # Get random task of a type and on a pg
-            task_type, pg = self.get_random_task()
+            # Get random/skewed task of a type and on a pg
+            if isSkewed:
+                task_type, pg = self.get_skewed_task()
+            else:
+                task_type, pg = self.get_random_task()
 
             print('Task and Placement group: ', task_type, pg.id)
             # Random amount of time for task to complete
-            time_for_task_to_complete = random.randint(1, 3)
+            time_for_task_to_complete = random.randint(taskSize, taskSize*2+1)
             can_preempt = True
 
             self.response_times[index+0.1*pg.primary_osd.id] = time.time()
@@ -144,7 +162,11 @@ class Workload:
 
 
 wl = Workload(3)
-wl.generate_workload()
+w2 = Workload(5,32,1,-1)  # 5 short skewed tasks for 32 pgs
+w3 = Workload(10,32,0,-1) # 10 short uniformly/randomly distributed tasks for 32 pgs
+
+#wl.generate_workload()
+w2.generate_workload()
 
 
 
