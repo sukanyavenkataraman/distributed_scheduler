@@ -7,6 +7,15 @@ import time
 
 tasks = {0:'TASK_BACKFILL', 1:'TASK_RECOVERY', 2:'TASK_SCRUB'}
 
+class WorkloadDescriptor:
+    def __init__(self, num_tasks, num_pgs=128, is_skewed=0, task_sizes=0, num_osds=3):
+        self.num_tasks = num_tasks
+        self.num_pgs = num_pgs
+        self.is_skewed = is_skewed == 0
+        self.task_sizes = task_sizes
+        self.num_osds = num_osds
+        self.tasks = []
+
 class Workload:
     def __init__(self, num_tasks, num_pgs=128, is_skewed=0, taskSizes=0, num_osds=3):
         self.num_tasks = num_tasks
@@ -15,6 +24,7 @@ class Workload:
 
         self.osd_pg_map = {}
         self.pg_osd_map = {}
+        self.workloadDescription = WorkloadDescriptor(num_tasks, num_pgs, is_skewed, taskSizes, num_osds)
 
         #building the osd_pg and pg_osd maps
         for osd in range(num_osds):
@@ -50,12 +60,16 @@ class Workload:
 
             self.placement_groups[i] = PG(i, pg_primary, pg_replicas)
 
-    def get_random_task(self):
-        return tasks[random.randint(0,2)], self.placement_groups[random.randint(0, self.num_pgs-1)]
+    def get_random_task(self, time_for_task_to_complete):
+        task, placement_group = tasks[random.randint(0, 2)], self.placement_groups[random.randint(0, self.num_pgs - 1)]
+        self.workloadDescription.tasks.append((task, placement_group.id, time_for_task_to_complete))
+        return task, placement_group
 
-    def get_skewed_task(self):
+    def get_skewed_task(self, time_for_task_to_complete):
         placement_groups = [x[0] for x in self.osd_pg_map[0] if x[1] == 0]
-        return tasks[random.randint(0,2)], self.placement_groups[random.choice(placement_groups)]
+        task, placement_group = tasks[random.randint(0,2)], self.placement_groups[random.choice(placement_groups)]
+        self.workloadDescription.tasks.append((task, placement_group.id, time_for_task_to_complete))
+        return task, placement_group
 
     def generate_workload(self):
 
@@ -73,15 +87,17 @@ class Workload:
             taskSize = info[1]
             isSkewed = info[2]
 
+            time_for_task_to_complete = random.randint(taskSize, taskSize * 2 + 1)
+
             # Get random/skewed task of a type and on a pg
             if isSkewed:
-                task_type, pg = self.get_skewed_task()
+                task_type, pg = self.get_skewed_task(time_for_task_to_complete)
             else:
-                task_type, pg = self.get_random_task()
+                task_type, pg = self.get_random_task(time_for_task_to_complete)
 
             print('Task and Placement group: ', task_type, pg.id)
             # Random amount of time for task to complete
-            time_for_task_to_complete = random.randint(taskSize, taskSize*2+1)
+
             can_preempt = True
 
             self.response_times[index+0.1*pg.primary_osd.id] = time.time()
@@ -167,6 +183,10 @@ w3 = Workload(10,32,0,-1) # 10 short uniformly/randomly distributed tasks for 32
 
 #wl.generate_workload()
 w2.generate_workload()
+
+# how to store all the task details for a given workload
+for t in w2.workloadDescription.tasks:
+    print(t[0], " ", t[1], " ", t[2])
 
 
 
