@@ -190,38 +190,45 @@ class Workload:
 
 f = open('results_1.txt', 'w+')
 
+params = []
 for num_tasks in (5, 25):
     for num_pg in (32, 128):
         for isSkewed in (0, 1):
             for task_length in (-1, 0, 1):
-                workload = Workload(num_tasks, num_pg, isSkewed, task_length)
+                params.append([num_tasks, num_pg, isSkewed, task_length])
 
-                line = "Current workload is: num_tasks: {}, num_pgs: {}, isSkewed: {}, task_length: {}".format(num_tasks, num_pg, isSkewed, task_length)
-                print (line)
-                f.write(str(num_tasks) + ' ' + str(num_pg) + ' ' + str(isSkewed) + ' ' + str(task_length)+'\n')
-                for task in workload.workloadDescription.tasks:
-                    f.write('Task Type: ' + str(task[0]) +' Placement Group: '+ str(task[1]) + ' Task Run Time: ' +str(task[2])+'\n')
+start_params = [5, 128, 1, -1]
+params = params[params.index(start_params):]
 
-                f.flush()
-                first_config = True
-                for local_reserver_type in ('current', 'uniform', 'loaddist'):
-                    for remote_reserver_type in ('current', 'distributed', 'same_as_prev'):
-                        workload.change_osd_scheduler(local_reserver_type=local_reserver_type, remote_reserver_type=remote_reserver_type)
-                        line = 'Current Algorithm: local reserver: {} remote reserver: {}'.format(local_reserver_type, remote_reserver_type)
-                        print (line)
-                        f.write(local_reserver_type + ' ' + remote_reserver_type+'\n')
-                        workload.generate_workload(use_new=first_config)
-                        first_config = False
+for (num_tasks, num_pg, isSkewed, task_length) in params:
+    workload = Workload(num_tasks, num_pg, isSkewed, task_length)
 
-                        for key, value in workload.response_times.items():
-                            f.write(str(key) + ':' + str(value))
-                            f.write(' ')
-                        f.write('\n')
-                        f.write('Average Response Time: ' + str(sum(workload.response_times.values())/len(workload.response_times.values())))
-                        f.write('\n')
-                        f.flush()
-                        print('Average Response Time: ' + str(sum(workload.response_times.values())/len(workload.response_times.values())))
-                        print ('\n\n')
+    line = "Current workload is: num_tasks: {}, num_pgs: {}, isSkewed: {}, task_length: {}".format(num_tasks, num_pg, isSkewed, task_length)
+    print (line)
+    f.write(str(num_tasks) + ' ' + str(num_pg) + ' ' + str(isSkewed) + ' ' + str(task_length)+'\n')
+    for task in workload.workloadDescription.tasks:
+        f.write('Task Type: ' + str(task[0]) +' Placement Group: '+ str(task[1]) + ' Task Run Time: ' +str(task[2])+'\n')
+
+    f.flush()
+    first_config = True
+    for local_reserver_type in ('current', 'uniform', 'loaddist'):
+        for remote_reserver_type in ('current', 'distributed', 'same_as_prev'):
+            workload.change_osd_scheduler(local_reserver_type=local_reserver_type, remote_reserver_type=remote_reserver_type)
+            line = 'Current Algorithm: local reserver: {} remote reserver: {}'.format(local_reserver_type, remote_reserver_type)
+            print (line)
+            f.write(local_reserver_type + ' ' + remote_reserver_type+'\n')
+            workload.generate_workload(use_new=first_config)
+            first_config = False
+
+            for key, value in workload.response_times.items():
+                f.write(str(key) + ':' + str(value))
+                f.write(' ')
+            f.write('\n')
+            f.write('Average Response Time: ' + str(sum(workload.response_times.values())/len(workload.response_times.values())))
+            f.write('\n')
+            f.flush()
+            print('Average Response Time: ' + str(sum(workload.response_times.values())/len(workload.response_times.values())))
+            print ('\n\n')
 f.close()
 
 
