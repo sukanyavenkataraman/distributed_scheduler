@@ -1,10 +1,11 @@
 import asyncio
-from scheduler import Scheduler
+from scheduler import LocalReserver, RemoteReserver
 import time
 
 # Priorities
-OSD_RECOVERY_PRIORITY_MIN=10
-OSD_BACKFILL_PRIORITY_BASE=100
+OSD_RECOVERY_PRIORITY=100
+OSD_BACKFILL_PRIORITY=50
+OSD_SCRUB_PRIORITY=20
 
 class Reservation:
     '''
@@ -24,11 +25,11 @@ class Reservation:
         self.tries_current = 0
 
         if type == 'TASK_RECOVERY':
-            self.priority = OSD_RECOVERY_PRIORITY_MIN
+            self.priority = OSD_RECOVERY_PRIORITY
         elif type == 'TASK_BACKFILL':
-            self.priority = OSD_BACKFILL_PRIORITY_BASE
+            self.priority = OSD_BACKFILL_PRIORITY
         else:
-            self.priority = OSD_RECOVERY_PRIORITY_MIN
+            self.priority = OSD_SCRUB_PRIORITY
 
         self.time = time
         self.state = 'Initiated'
@@ -55,7 +56,7 @@ class OSD:
     Assume that an OSD can perform a max of max_tasks (foreground and background)
     Usage is computed as a percentage of this max_tasks
     '''
-    def __init__(self, id, max_tasks=100, max_backfills=2, min_priority=0):
+    def __init__(self, id, max_tasks=100, max_backfills=2, min_priority=0, num_replicas=2):
         self.id = id
 
         self.max_backfills = max_backfills
@@ -66,8 +67,8 @@ class OSD:
 
         self.current_tasks = []
 
-        self.local_reserver = Scheduler()
-        self.remote_reserver = Scheduler()
+        self.local_reserver = LocalReserver(max_replicas=num_replicas)
+        self.remote_reserver = RemoteReserver()
 
     '''
     def __repr__(self):

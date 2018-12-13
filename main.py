@@ -3,6 +3,7 @@ from ceph_classes import Reservation, OSD, PG
 import random
 import threading
 from multiprocessing.pool import ThreadPool
+from scheduler import LocalReserver, RemoteReserver
 import time
 
 tasks = {0:'TASK_BACKFILL', 1:'TASK_RECOVERY', 2:'TASK_SCRUB'}
@@ -39,6 +40,7 @@ class Workload:
             self.osd_pg_map[replica_2_osd].append((pg, 2))
             self.pg_osd_map[pg] = [primary_osd, replica_1_osd, replica_2_osd]
 
+        self.num_replicas = 2
         self.response_times = {}
         self.obj_storage_devices = []
         self.placement_groups = {} #map for pg_id -> pg object
@@ -71,10 +73,15 @@ class Workload:
         self.workloadDescription.tasks.append((task, placement_group.id, time_for_task_to_complete))
         return task, placement_group
 
-    def generate_workload(self):
+    def change_osd_scheduler(self, local_reserver_type='current', remote_reserver_type='current'):
+        for osd in self.obj_storage_devices:
+            osd.local_reserver = LocalReserver(type=local_reserver_type, max_replicas=self.num_replicas)
+            osd.remote_reserver = RemoteReserver(type=remote_reserver_type)
+
+    def generate_workload(self, use_new=False):
 
         thread_pool = ThreadPool(self.num_tasks)
-        thread_pool.map(self.workload_thread, [(i, random.choice(self.taskSizes), self.isSkewed) for i in range(self.num_tasks)])
+        thread_pool.map(self.workload_thread, [(i, random.choice(self.taskSizes), self.isSkewed, use_new) for i in range(self.num_tasks)])
 
         thread_pool.close()
         thread_pool.join()
@@ -86,14 +93,19 @@ class Workload:
             index = info[0]
             taskSize = info[1]
             isSkewed = info[2]
+            newWorkload = info[3]
 
-            time_for_task_to_complete = random.randint(taskSize, taskSize * 2 + 1)
-
-            # Get random/skewed task of a type and on a pg
-            if isSkewed:
-                task_type, pg = self.get_skewed_task(time_for_task_to_complete)
+            if not newWorkload:
+                task_type, pg_id, time_for_task_to_complete = self.workloadDescription.tasks[index]
+                pg = self.placement_groups[pg_id]
             else:
-                task_type, pg = self.get_random_task(time_for_task_to_complete)
+                time_for_task_to_complete = random.randint(taskSize, taskSize * 2 + 1)
+
+                # Get random/skewed task of a type and on a pg
+                if isSkewed:
+                    task_type, pg = self.get_skewed_task(time_for_task_to_complete)
+                else:
+                    task_type, pg = self.get_random_task(time_for_task_to_complete)
 
             print('Task and Placement group: ', task_type, pg.id)
             # Random amount of time for task to complete
@@ -176,17 +188,43 @@ class Workload:
 
         print ('Request reservation success?: ', ret)
 
+f = open('results_1.txt', 'w+')
 
-wl = Workload(3)
-w2 = Workload(5,32,1,-1)  # 5 short skewed tasks for 32 pgs
-w3 = Workload(10,32,0,-1) # 10 short uniformly/randomly distributed tasks for 32 pgs
+for num_tasks in (5, 25):
+    for num_pg in (32, 128):
+        for isSkewed in (0, 1):
+            for task_length in (-1, 0, 1):
+                workload = Workload(num_tasks, num_pg, isSkewed, task_length)
 
-#wl.generate_workload()
-w2.generate_workload()
+                line = "Current workload is: num_tasks: {}, num_pgs: {}, isSkewed: {}, task_length: {}".format(num_tasks, num_pg, isSkewed, task_length)
+                print (line)
+                f.write(str(num_tasks) + ' ' + str(num_pg) + ' ' + str(isSkewed) + ' ' + str(task_length)+'\n')
+                for task in workload.workloadDescription.tasks:
+                    f.write('Task Type: ' + str(task[0]) +' Placement Group: '+ str(task[1]) + ' Task Run Time: ' +str(task[2])+'\n')
 
-# how to store all the task details for a given workload
-for t in w2.workloadDescription.tasks:
-    print(t[0], " ", t[1], " ", t[2])
+                f.flush()
+                first_config = True
+                for local_reserver_type in ('current', 'uniform', 'loaddist'):
+                    for remote_reserver_type in ('current', 'distributed', 'same_as_prev'):
+                        workload.change_osd_scheduler(local_reserver_type=local_reserver_type, remote_reserver_type=remote_reserver_type)
+                        line = 'Current Algorithm: local reserver: {} remote reserver: {}'.format(local_reserver_type, remote_reserver_type)
+                        print (line)
+                        f.write(local_reserver_type + ' ' + remote_reserver_type+'\n')
+                        workload.generate_workload(use_new=first_config)
+                        first_config = False
+
+                        for key, value in workload.response_times.items():
+                            f.write(str(key) + ':' + str(value))
+                            f.write(' ')
+
+                        f.write('\n')
+                        f.flush()
+                        print ('\n\n')
+f.close()
+
+
+
+
 
 
 
