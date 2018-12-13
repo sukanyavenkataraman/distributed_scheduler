@@ -67,8 +67,8 @@ class OSD:
 
         self.current_tasks = []
 
-        self.local_reserver = LocalReserver(max_replicas=num_replicas)
-        self.remote_reserver = RemoteReserver()
+        self.local_reserver = LocalReserver(max_replicas=num_replicas, max_backfills=max_backfills, min_priority=min_priority)
+        self.remote_reserver = RemoteReserver(max_backfills=max_backfills, min_priority=min_priority)
 
     '''
     def __repr__(self):

@@ -4,7 +4,7 @@ from collections import Counter as mset
 from threading import Lock
 
 class LocalReserver:
-    def __init__(self, type='current', max_replicas=2):
+    def __init__(self, type='current', max_replicas=2, max_backfills=2, min_priority=0):
         self.type = type
         self.max_replicas = max_replicas
 
@@ -17,12 +17,13 @@ class LocalReserver:
         self.preempt_priorities = []
 
         #Default
-        self.max_allowed = 10
-        self.min_priority = 0
+        self.max_allowed = max_backfills
+        self.min_priority = min_priority
 
         #For alternate algos
         # Max size = max_replicas*max_allowed
         self.mru_osd = []
+        self.all_queues_lock = Lock()
 
     def get_scheduler_state(self):
         print ('Allqueues: ', self.all_queues)
@@ -33,7 +34,6 @@ class LocalReserver:
 
     def request_reservation(self, reservation):
 
-
         # Requesting reserver for task reservation, for placement group pg and on osd osd
 
         #ordered dict's order is acending, but we want the order to be reversed, i.e, highest priprity takes precedence
@@ -41,6 +41,8 @@ class LocalReserver:
         print ('State before requesting reservation')
         self.get_scheduler_state()
 
+        self.all_queues_lock.acquire()
+        print ('Acquired lock in request reservation')
         if -1.0*reservation.priority not in self.priorities:
             heapq.heappush(self.priorities, -1.0*reservation.priority)
 
@@ -50,8 +52,8 @@ class LocalReserver:
             print (reservation.priority)
             self.all_queues[reservation.priority].append(reservation)
 
-        self.max_allowed = reservation.osd.max_backfills
-        self.min_priority = reservation.osd.min_priority
+        self.all_queues_lock.release()
+        print('Released lock in request reservation')
 
         print('State after requesting reservation')
         self.get_scheduler_state()
@@ -86,6 +88,8 @@ class LocalReserver:
             '''
 
         else:
+            self.all_queues_lock.acquire()
+            print('Acquired lock in cancel reservation')
             print ('Reservation ', reservation.id, ' not in progress queue, removing from all queues')
             self.all_queues[reservation.priority].remove(reservation)
 
@@ -94,6 +98,8 @@ class LocalReserver:
                 self.all_queues.pop(reservation.priority)
                 self.priorities.remove(-1.0 * reservation.priority)
 
+            self.all_queues_lock.release()
+            print('Released lock in cancel reservation')
         print ('State after cancelling')
         self.get_scheduler_state()
 
@@ -164,14 +170,17 @@ class LocalReserver:
                 else:
                     self.preempt_queue[reservation.priority].append(reservation)
 
+            self.all_queues_lock.acquire()
+            print('Acquired lock in do_queue')
             # Remove from all_queues
             self.all_queues[reservation.priority].remove(reservation)
 
             if len(self.all_queues[reservation.priority]) == 0:
                 self.all_queues.pop(reservation.priority)
                 self.priorities.remove(-1.0 * reservation.priority)
+            self.all_queues_lock.release()
 
-
+            print('Released lock in do queue')
             # Schedule task
             print ('Going to schedule a task')
 
@@ -252,7 +261,7 @@ class LocalReserver:
 
 
 class RemoteReserver:
-    def __init__(self, type='current'):
+    def __init__(self, type='current', max_backfills=2, min_priority=0):
         self.type = type
 
         self.in_progress = []
@@ -264,12 +273,13 @@ class RemoteReserver:
         self.preempt_priorities = []
 
         # Default
-        self.max_allowed = 10
-        self.min_priority = 0
+        self.max_allowed = max_backfills
+        self.min_priority = min_priority
 
         # For alternate algos
         # Max size = max_allowed
         self.mru_osd = []
+        self.all_queues_lock = Lock()
 
     def get_scheduler_state(self):
         print('Allqueues: ', self.all_queues)
@@ -286,6 +296,8 @@ class RemoteReserver:
         print('State before requesting reservation')
         self.get_scheduler_state()
 
+        self.all_queues_lock.acquire()
+        print('Acquired lock in release reservation remote')
         if -1.0 * reservation.priority not in self.priorities:
             heapq.heappush(self.priorities, -1.0 * reservation.priority)
 
@@ -294,6 +306,9 @@ class RemoteReserver:
         else:
             print(reservation.priority)
             self.all_queues[reservation.priority].append(reservation)
+
+        self.all_queues_lock.release()
+        print('Released lock in release reservation remote')
 
         self.max_allowed = reservation.osd.max_backfills
         self.min_priority = reservation.osd.min_priority
@@ -324,6 +339,8 @@ class RemoteReserver:
             #self.mru_osd.remove(reservation.pg.primary_osd)
 
         else:
+            self.all_queues_lock.acquire()
+            print('Acquired lock in cancel reservation remote')
             print('Reservation ', reservation.id, ' not in progress queue, removing from all queues')
             self.all_queues[reservation.priority].remove(reservation)
 
@@ -331,6 +348,8 @@ class RemoteReserver:
                 print('No reservations of this priority, so removing')
                 self.all_queues.pop(reservation.priority)
                 self.priorities.remove(-1.0 * reservation.priority)
+            self.all_queues_lock.release()
+            print('Released lock in release reservation remote')
 
         print('State after cancelling')
         self.get_scheduler_state()
@@ -387,12 +406,16 @@ class RemoteReserver:
             # Add to in_progress queue
             self.in_progress.append(reservation)
 
+            self.all_queues_lock.acquire()
+            print('Acquired lock in do queue remote')
             # Remove from all_queues
             self.all_queues[reservation.priority].remove(reservation)
 
             if len(self.all_queues[reservation.priority]) == 0:
                 self.all_queues.pop(reservation.priority)
                 self.priorities.remove(-1.0 * reservation.priority)
+            print('Released lock in do queue remote')
+            self.all_queues_lock.release()
 
             # Always preempt the least priority reservation first
             # Add to preempt queue

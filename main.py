@@ -216,9 +216,11 @@ for num_tasks in (5, 25):
                         for key, value in workload.response_times.items():
                             f.write(str(key) + ':' + str(value))
                             f.write(' ')
-
+                        f.write('\n')
+                        f.write('Average Response Time: ' + str(sum(workload.response_times.values())/len(workload.response_times.values())))
                         f.write('\n')
                         f.flush()
+                        print('Average Response Time: ' + str(sum(workload.response_times.values())/len(workload.response_times.values())))
                         print ('\n\n')
 f.close()
 
