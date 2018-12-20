@@ -1,0 +1,141 @@
+Tasks,PGs,Skewed,TaskLength,Current,Current,Avg Response Time
+5,32,1,-1,Current,Current, 3.77101887067159
+5,32,1,-1,Current,Load Balanced, 3.604239495595296
+5,32,1,-1,Current,Network Efficient, 3.603490972518921
+5,32,1,-1,Uniform,Current, 3.6088658491770427
+5,32,1,-1,Uniform,Load Balanced, 3.894563357035319
+5,32,1,-1,Uniform,Network Efficient, 3.905996481577555
+5,32,1,-1,Load Balanced,Current, 3.9153271039326984
+5,32,1,-1,Load Balanced,Load Balanced, 3.622795343399048
+5,32,1,-1,Load Balanced,Network Efficient, 3.885915454228719
+
+5,32,1,0,Current,Current, 19.027282349268596
+5,32,1,0,Current,Load Balanced, 18.983459122975667
+5,32,1,0,Current,Network Efficient, 21.946735429763795
+5,32,1,0,Uniform,Current, 16.983419322967528
+5,32,1,0,Uniform,Load Balanced, 19.127568403879803
+5,32,1,0,Uniform,Network Efficient, 18.238582674662272
+5,32,1,0,Load Balanced,Current, 19.07641388575236
+5,32,1,0,Load Balanced,Load Balanced, 19.054747660954792
+5,32,1,0,Load Balanced,Network Efficient, 19.087766218185426
+
+5,32,1,1,Current,Current, 35.05622639656067
+5,32,1,1,Current,Load Balanced, 35.74954991340637
+5,32,1,1,Current,Network Efficient, 35.32420570055644
+5,32,1,1,Uniform,Current, 35.668849325180055
+5,32,1,1,Uniform,Load Balanced, 35.65686405499776
+5,32,1,1,Uniform,Network Efficient, 36.230704132715864
+5,32,1,1,Load Balanced,Current, 35.71609013875325
+5,32,1,1,Load Balanced,Load Balanced, 35.61880950927734
+5,32,1,1,Load Balanced,Network Efficient, 35.776457945505776
+
+5,128,0,-1,Current,Current, 2.865041637420654
+5,128,0,-1,Current,Load Balanced, 2.4531838417053224
+5,128,0,-1,Current,Network Efficient, 2.8450005690256757
+5,128,0,-1,Uniform,Current, 2.867767111460368
+5,128,0,-1,Uniform,Load Balanced, 2.8674517313639325
+5,128,0,-1,Uniform,Network Efficient, 2.505453093846639
+5,128,0,-1,Load Balanced,Current, 2.858668899536133
+5,128,0,-1,Load Balanced,Load Balanced, 2.89087332089742
+5,128,0,-1,Load Balanced,Network Efficient, 2.8850677967071534
+
+5,128,0,0,Current,Current, 12.84045639038086
+5,128,0,0,Current,Load Balanced, 12.877648576100666
+5,128,0,0,Current,Network Efficient, 12.864408922195434
+5,128,0,0,Uniform,Current, 12.880791680018108
+5,128,0,0,Uniform,Load Balanced, 12.898753054936726
+5,128,0,0,Uniform,Network Efficient, 12.86150910059611
+5,128,0,0,Load Balanced,Current, 46.98513620694478
+5,128,0,0,Load Balanced,Load Balanced, 12.855624024073283
+5,128,0,0,Load Balanced,Network Efficient, 12.891681496302287
+
+5,128,0,1,Current,Current, 24.2144758383433
+5,128,0,1,Current,Load Balanced, 24.228968302408855
+5,128,0,1,Current,Network Efficient, 24.225317891438802
+5,128,0,1,Uniform,Current, 24.21748315493266
+5,128,0,1,Uniform,Load Balanced, 26.986282316843667
+5,128,0,1,Uniform,Network Efficient, 24.198315461476643
+5,128,0,1,Load Balanced,Current, 26.93508326212565
+5,128,0,1,Load Balanced,Load Balanced, 26.914028469721476
+5,128,0,1,Load Balanced,Network Efficient, 24.32049206097921
+
+5,128,1,-1,Current,Current, 5.94588836034139
+5,128,1,-1,Current,Load Balanced, 5.979826386769613
+5,128,1,-1,Current,Network Efficient, 5.260687573750814
+5,128,1,-1,Uniform,Current, 5.9255712032318115
+5,128,1,-1,Uniform,Load Balanced, 5.980959224700928
+5,128,1,-1,Uniform,Network Efficient, 5.835288921991984
+5,128,1,-1,Load Balanced,Current, 6.009636433919271
+5,128,1,-1,Load Balanced,Load Balanced, 5.309452470143636
+5,128,1,-1,Load Balanced,Network Efficient, 5.815695031483968
+
+5,128,1,0,Current,Current, 21.012866163253783
+5,128,1,0,Current,Load Balanced, 19.9514656384786
+5,128,1,0,Current,Network Efficient, 21.084273719787596
+5,128,1,0,Uniform,Current, 19.690144602457682
+5,128,1,0,Uniform,Load Balanced, 19.674894905090333
+5,128,1,0,Uniform,Network Efficient, 21.122024456659954
+5,128,1,0,Load Balanced,Current, 18.776204538345336
+5,128,1,0,Load Balanced,Load Balanced, 17.964696804682415
+5,128,1,0,Load Balanced,Network Efficient, 19.83565287590027
+
+5,128,1,1,Current,Current, 35.61678926150004
+5,128,1,1,Current,Load Balanced, 39.43827516237895
+5,128,1,1,Current,Network Efficient, 41.64951774279277
+5,128,1,1,Uniform,Current, 35.73081270853678
+5,128,1,1,Uniform,Load Balanced, 36.023093207677206
+5,128,1,1,Uniform,Network Efficient, 40.354122718175255
+5,128,1,1,Load Balanced,Current, 36.16003945668538
+5,128,1,1,Load Balanced,Load Balanced, 36.163524595896405
+5,128,1,1,Load Balanced,Network Efficient, 40.30809448560079
+
+25,32,0,-1,Current,Current, 8.403441759745279
+25,32,0,-1,Current,Load Balanced, 7.662687428792318
+25,32,0,-1,Current,Network Efficient, 8.025415693918864
+25,32,0,-1,Uniform,Current, 8.259190400441488
+25,32,0,-1,Uniform,Load Balanced, 8.366715650558472
+25,32,0,-1,Uniform,Network Efficient, 7.771240243911743
+25,32,0,-1,Load Balanced,Current, 7.746493911743164
+25,32,0,-1,Load Balanced,Load Balanced, 8.13563417116801
+25,32,0,-1,Load Balanced,Network Efficient, 8.140924889246623
+
+25,32,0,0,Current,Current, 21.151750157674154
+25,32,0,0,Current,Load Balanced, 20.556433636347453
+25,32,0,0,Current,Network Efficient, 21.299671847025554
+25,32,0,0,Uniform,Current, 20.914520854949952
+25,32,0,0,Uniform,Load Balanced, 20.511857458750406
+25,32,0,0,Uniform,Network Efficient, 21.33487921079
+25,32,0,0,Load Balanced,Current, 20.500631643931072
+25,32,0,0,Load Balanced,Load Balanced, 20.075492776234945
+25,32,0,0,Load Balanced,Network Efficient, 23.619686187108357
+
+25,32,0,1,Current,Current, 54.32525456110636
+25,32,0,1,Current,Load Balanced, 57.15618901252746
+25,32,0,1,Current,Network Efficient, 56.283799454371135
+25,32,0,1,Uniform,Current, 55.84416907946269
+25,32,0,1,Uniform,Load Balanced, 57.18992447535197
+25,32,0,1,Uniform,Network Efficient, 59.519622799555464
+25,32,0,1,Load Balanced,Current, 56.448219553629556
+25,32,0,1,Load Balanced,Load Balanced, 56.009863201777144
+25,32,0,1,Load Balanced,Network Efficient, 57.33592102050781
+
+25,32,1,-1,Current,Current, 7.622554744084676
+25,32,1,-1,Current,Load Balanced, 6.867430944442749
+25,32,1,-1,Current,Network Efficient, 7.716599845886231
+25,32,1,-1,Uniform,Current, 7.572708870569865
+25,32,1,-1,Uniform,Load Balanced, 7.194197282791138
+25,32,1,-1,Uniform,Network Efficient, 7.911923173268636
+25,32,1,-1,Load Balanced,Current, 8.068739493687948
+25,32,1,-1,Load Balanced,Load Balanced, 7.2157307052612305
+25,32,1,-1,Load Balanced,Network Efficient, 6.765041618347168
+
+25,32,1,0,Current,Current, 31.96685861269633
+25,32,1,0,Current,Load Balanced, 28.178960269292194
+25,32,1,0,Current,Network Efficient, 28.833227341969806
+25,32,1,0,Uniform,Current, 29.688876657485963
+25,32,1,0,Uniform,Load Balanced, 27.84681036949158
+25,32,1,0,Uniform,Network Efficient, 27.976257966359455
+25,32,1,0,Load Balanced,Current, 29.38063223520915
+25,32,1,0,Load Balanced,Load Balanced, 28.797890996932985
+25,32,1,0,Load Balanced,Network Efficient, 29.7299289894104
+
